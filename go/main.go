@@ -441,7 +441,7 @@ func getMe(c echo.Context) error {
 
 // GET /api/isu
 // ISUの一覧を取得
-func getIsuList(c echo.Context) error {
+func getIsuList(c echo.Context) error { // FIXME: 高速化
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -687,7 +687,7 @@ func getIsuID(c echo.Context) error {
 
 // GET /api/isu/:jia_isu_uuid/icon
 // ISUのアイコンを取得
-func getIsuIcon(c echo.Context) error {
+func getIsuIcon(c echo.Context) error { // FIXME: 高速化
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -1076,7 +1076,7 @@ func calculateConditionLevel(condition string) (string, error) {
 
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
-func getTrend(c echo.Context) error {
+func getTrend(c echo.Context) error { // FIXME: 高速化
 	characterList := []Isu{}
 	err := db.Select(&characterList, "SELECT `character` FROM `isu` GROUP BY `character`")
 	if err != nil {
@@ -1103,7 +1103,7 @@ func getTrend(c echo.Context) error {
 		for _, isu := range isuList {
 			conditions := []IsuCondition{}
 			err = db.Select(&conditions,
-				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC",
+				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC", // FIXME: slow query
 				isu.JIAIsuUUID,
 			)
 			if err != nil {
@@ -1157,7 +1157,7 @@ func getTrend(c echo.Context) error {
 
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
-func postIsuCondition(c echo.Context) error {
+func postIsuCondition(c echo.Context) error { // FIXME: 高速化
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
 	dropProbability := 0.9
 	if rand.Float64() <= dropProbability {
