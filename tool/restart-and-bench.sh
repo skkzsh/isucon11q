@@ -6,7 +6,6 @@ sudo truncate -s 0 -c /var/log/mysql/slow.log
 # mysqladmin flush-logs
 
 sudo systemctl restart isucondition.go
-# sudo systemctl restart isucondition.python
 sudo systemctl restart jiaapi-mock
 sudo systemctl restart mysql
 sudo systemctl restart nginx
@@ -18,4 +17,5 @@ sudo cat /var/log/nginx/access.log | \
 	alp json -m '^/api/condition/[0-9a-f\-]+$','^/api/isu/[0-9a-f\-]+$','^/api/isu/[0-9a-f\-]+/graph$','^/api/isu/[0-9a-f\-]+/icon$','^/isu/[0-9a-f\-]+$','^/isu/[0-9a-f\-]+/condition$','^/isu/[0-9a-f\-]+/graph$' --sort avg -r
 
 # sudo mysqldumpslow /var/log/mysql/slow.log
+# sudo pt-query-digest /var/log/mysql/slow.log
 
