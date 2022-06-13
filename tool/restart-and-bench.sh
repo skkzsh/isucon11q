@@ -6,6 +6,7 @@ sudo truncate -s 0 -c /var/log/mysql/slow.log
 # mysqladmin flush-logs
 
 sudo systemctl restart isucondition.go
+# sudo systemctl restart isucondition.python
 sudo systemctl restart jiaapi-mock
 sudo systemctl restart mysql
 sudo systemctl restart nginx
