@@ -5,7 +5,10 @@ sudo truncate -s 0 -c /var/log/nginx/access.log
 sudo truncate -s 0 -c /var/log/mysql/slow.log
 # mysqladmin flush-logs
 
+cd /home/isucon/webapp/go
+go build -o isucondition main.go
 sudo systemctl restart isucondition.go
+
 sudo systemctl restart jiaapi-mock
 sudo systemctl restart mysql
 sudo systemctl restart nginx
@@ -19,3 +22,4 @@ sudo cat /var/log/nginx/access.log | \
 # sudo mysqldumpslow /var/log/mysql/slow.log
 # sudo pt-query-digest /var/log/mysql/slow.log
 
+# go tool pprof -http=:10060 http://localhost:6060/debug/pprof/profile
