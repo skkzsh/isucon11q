@@ -1197,7 +1197,7 @@ func getTrend(c echo.Context) error { // FIXME: error, slow
 
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
-func postIsuCondition(c echo.Context) error {
+func postIsuCondition(c echo.Context) error { // FIXME: 呼出多
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
 	dropProbability := 0.9
 	if rand.Float64() <= dropProbability {
