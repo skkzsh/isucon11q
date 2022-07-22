@@ -17,6 +17,10 @@ import (
 	"strings"
 	"time"
 
+	echotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
+
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
@@ -40,6 +44,8 @@ const (
 	scoreConditionLevelInfo     = 3
 	scoreConditionLevelWarning  = 2
 	scoreConditionLevelCritical = 1
+	DatadogServiceName          = "isucondition"
+	DatadogEnv                  = "myenv"
 )
 
 var (
@@ -207,12 +213,41 @@ func init() {
 }
 
 func main() {
+	var err error
+
+	err = profiler.Start(
+		profiler.WithService(DatadogServiceName),
+		profiler.WithEnv(DatadogEnv),
+		profiler.WithProfileTypes(
+			profiler.CPUProfile,
+			profiler.HeapProfile,
+			// The profiles below are disabled by default to keep overhead
+			// low, but can be enabled as needed.
+
+			// profiler.BlockProfile,
+			// profiler.MutexProfile,
+			// profiler.GoroutineProfile,
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer profiler.Stop()
+
+	tracer.Start(
+		tracer.WithService(DatadogServiceName),
+		tracer.WithEnv(DatadogEnv),
+		// tracer.WithRuntimeMetrics(),
+	)
+	defer tracer.Stop()
+
 	e := echo.New()
 	e.Debug = true
 	e.Logger.SetLevel(log.DEBUG)
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(echotrace.Middleware(echotrace.WithServiceName(DatadogServiceName)))
 
 	e.POST("/initialize", postInitialize)
 
@@ -238,7 +273,6 @@ func main() {
 
 	mySQLConnectionData = NewMySQLConnectionEnv()
 
-	var err error
 	db, err = mySQLConnectionData.ConnectDB()
 	if err != nil {
 		e.Logger.Fatalf("failed to connect db: %v", err)

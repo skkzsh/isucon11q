@@ -8,6 +8,6 @@ require (
 	github.com/gorilla/sessions v1.2.1
 	github.com/jmoiron/sqlx v1.3.4
 	github.com/labstack/echo/v4 v4.3.0
-	github.com/labstack/gommon v0.3.0
-	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a // indirect
+	github.com/labstack/gommon v0.3.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.40.1 // indirect
 )
