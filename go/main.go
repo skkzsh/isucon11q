@@ -475,7 +475,7 @@ func getMe(c echo.Context) error {
 
 // GET /api/isu
 // ISUの一覧を取得
-func getIsuList(c echo.Context) error {
+func getIsuList(c echo.Context) error { // FIXME: slow
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -693,7 +693,7 @@ func postIsu(c echo.Context) error {
 
 // GET /api/isu/:jia_isu_uuid
 // ISUの情報を取得
-func getIsuID(c echo.Context) error {
+func getIsuID(c echo.Context) error { // FIXME: error
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -723,7 +723,7 @@ func getIsuID(c echo.Context) error {
 
 // GET /api/isu/:jia_isu_uuid/icon
 // ISUのアイコンを取得
-func getIsuIcon(c echo.Context) error {
+func getIsuIcon(c echo.Context) error { // FIXME: slow
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -978,7 +978,7 @@ func calculateGraphDataPoint(isuConditions []IsuCondition) (GraphDataPoint, erro
 
 // GET /api/condition/:jia_isu_uuid
 // ISUのコンディションを取得
-func getIsuConditions(c echo.Context) error {
+func getIsuConditions(c echo.Context) error { // FIXME: slow
 	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
 	if err != nil {
 		if errStatusCode == http.StatusUnauthorized {
@@ -1116,7 +1116,7 @@ func calculateConditionLevel(condition string) (string, error) {
 
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
-func getTrend(c echo.Context) error {
+func getTrend(c echo.Context) error { // FIXME: error, slow
 	characterList := []Isu{}
 	err := db.Select(&characterList, "SELECT `character` FROM `isu` GROUP BY `character`")
 	if err != nil {
@@ -1242,6 +1242,7 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
+		// FIXME: 呼出多
 		_, err = tx.Exec(
 			"INSERT INTO `isu_condition`"+
 				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
