@@ -24,6 +24,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/gommon/log"
+	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	sqlxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/jmoiron/sqlx"
+	echotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/labstack/echo.v4"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 )
 
 const (
@@ -40,6 +45,8 @@ const (
 	scoreConditionLevelInfo     = 3
 	scoreConditionLevelWarning  = 2
 	scoreConditionLevelCritical = 1
+	ServiceName                 = "isucondition"
+	DatadogEnv                  = "isucon11q"
 )
 
 var (
@@ -189,8 +196,9 @@ func NewMySQLConnectionEnv() *MySQLConnectionEnv {
 }
 
 func (mc *MySQLConnectionEnv) ConnectDB() (*sqlx.DB, error) {
+	sqltrace.Register("mysql", &mysql.MySQLDriver{}, sqltrace.WithServiceName(ServiceName))
 	dsn := fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=true&loc=Asia%%2FTokyo", mc.User, mc.Password, mc.Host, mc.Port, mc.DBName)
-	return sqlx.Open("mysql", dsn)
+	return sqlxtrace.Open("mysql", dsn)
 }
 
 func init() {
@@ -207,12 +215,44 @@ func init() {
 }
 
 func main() {
+	var err error
+
+	err = profiler.Start(
+		profiler.WithService(ServiceName), // DD_SERVICE
+		profiler.WithEnv(DatadogEnv),      // DD_ENV
+		// profiler.WithVersion("<APPLICATION_VERSION>"), // DD_VERSION
+		// profiler.WithTags("<KEY1>:<VALUE1>", "<KEY2>:<VALUE2>"),
+		profiler.WithProfileTypes(
+			profiler.CPUProfile,
+			profiler.HeapProfile,
+			// The profiles below are disabled by default to keep overhead
+			// low, but can be enabled as needed.
+
+			// profiler.BlockProfile,
+			// profiler.MutexProfile,
+			// profiler.GoroutineProfile,
+		),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer profiler.Stop()
+
+	tracer.Start(
+		tracer.WithService(ServiceName), // DD_SERVICE
+		tracer.WithEnv(DatadogEnv),      // DD_ENV
+		// tracer.WithServiceVersion("abc123"), // DD_VERSION
+		// tracer.WithRuntimeMetrics(), // DD_RUNTIME_METRICS_ENABLED
+	)
+	defer tracer.Stop()
+
 	e := echo.New()
-	e.Debug = true
-	e.Logger.SetLevel(log.DEBUG)
+	e.Debug = true               // TODO
+	e.Logger.SetLevel(log.DEBUG) // TODO
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(echotrace.Middleware(echotrace.WithServiceName(ServiceName)))
 
 	e.POST("/initialize", postInitialize)
 
@@ -238,7 +278,7 @@ func main() {
 
 	mySQLConnectionData = NewMySQLConnectionEnv()
 
-	var err error
+	// var err error
 	db, err = mySQLConnectionData.ConnectDB()
 	if err != nil {
 		e.Logger.Fatalf("failed to connect db: %v", err)
