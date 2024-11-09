@@ -1083,21 +1083,21 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 
 	conditionsResponse := []*GetIsuConditionResponse{}
 	for _, c := range conditions {
-		cLevel, err := calculateConditionLevel(c.Condition)
-		if err != nil {
-			continue
-		}
+		// cLevel, err := calculateConditionLevel(c.Condition)
+		// if err != nil {
+		// 	continue
+		// }
 
-		// if _, ok := conditionLevel[c.ConditionLevel]; ok {
-		if _, ok := conditionLevel[cLevel]; ok {
+		// if _, ok := conditionLevel[cLevel]; ok {
+		if _, ok := conditionLevel[c.ConditionLevel]; ok {
 			data := GetIsuConditionResponse{
 				JIAIsuUUID:     c.JIAIsuUUID,
 				IsuName:        isuName,
 				Timestamp:      c.Timestamp.Unix(),
 				IsSitting:      c.IsSitting,
 				Condition:      c.Condition,
-				ConditionLevel: cLevel,
-				// ConditionLevel: c.ConditionLevel,
+				ConditionLevel: c.ConditionLevel,
+				// ConditionLevel: cLevel,
 				Message: c.Message,
 			}
 			conditionsResponse = append(conditionsResponse, &data)
