@@ -1068,13 +1068,13 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
 				"	AND `condition_level` IN (?)"+
-				"	ORDER BY `timestamp` DESC", // LIMIT ?
-			jiaIsuUUID, endTime, conditionLevel,
+				"	ORDER BY `timestamp` DESC LIMIT ?",
+			jiaIsuUUID, endTime, conditionLevel, limit,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("db error: %v", err)
 		}
-		err = db.Select(&conditions, // TODO: slow query
+		err = db.Select(&conditions,
 			query, params...,
 		// "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 		// 	"	AND `timestamp` < ?"+
@@ -1088,8 +1088,8 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 				"	AND `timestamp` < ?"+
 				"	AND ? <= `timestamp`"+
 				"	AND `condition_level` IN (?)"+
-				"	ORDER BY `timestamp` DESC", // LIMIT ?
-			jiaIsuUUID, endTime, startTime, conditionLevel, // limit,
+				"	ORDER BY `timestamp` DESC LIMIT ?",
+			jiaIsuUUID, endTime, startTime, conditionLevel, limit,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("db error: %v", err)
@@ -1131,10 +1131,9 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 		//}
 	}
 
-	// TODO: 先に絞れないか?
-	if len(conditionsResponse) > limit {
-		conditionsResponse = conditionsResponse[:limit]
-	}
+	// if len(conditionsResponse) > limit {
+	// 	conditionsResponse = conditionsResponse[:limit]
+	// }
 
 	return conditionsResponse, nil
 }
