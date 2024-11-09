@@ -88,13 +88,14 @@ type GetIsuListResponse struct {
 }
 
 type IsuCondition struct {
-	ID         int       `db:"id"`
-	JIAIsuUUID string    `db:"jia_isu_uuid"`
-	Timestamp  time.Time `db:"timestamp"`
-	IsSitting  bool      `db:"is_sitting"`
-	Condition  string    `db:"condition"`
-	Message    string    `db:"message"`
-	CreatedAt  time.Time `db:"created_at"`
+	ID             int       `db:"id"`
+	JIAIsuUUID     string    `db:"jia_isu_uuid"`
+	Timestamp      time.Time `db:"timestamp"`
+	IsSitting      bool      `db:"is_sitting"`
+	Condition      string    `db:"condition"`
+	ConditionLevel string    `db:"condition_level"` // Enum
+	Message        string    `db:"message"`
+	CreatedAt      time.Time `db:"created_at"`
 }
 
 type MySQLConnectionEnv struct {
@@ -1062,16 +1063,18 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 		err = db.Select(&conditions, // TODO: slow query
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
-				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime,
+				// "	AND `condition_level`"+
+				"	ORDER BY `timestamp` DESC", // LIMIT ?
+			jiaIsuUUID, endTime, // limit,
 		)
 	} else {
 		err = db.Select(&conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
 				"	AND ? <= `timestamp`"+
-				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime, startTime,
+				// "	AND `condition_level`"+
+				"	ORDER BY `timestamp` DESC", // LIMIT ?
+			jiaIsuUUID, endTime, startTime, // limit,
 		)
 	}
 	if err != nil {
@@ -1085,6 +1088,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 			continue
 		}
 
+		// if _, ok := conditionLevel[c.ConditionLevel]; ok {
 		if _, ok := conditionLevel[cLevel]; ok {
 			data := GetIsuConditionResponse{
 				JIAIsuUUID:     c.JIAIsuUUID,
@@ -1093,7 +1097,8 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 				IsSitting:      c.IsSitting,
 				Condition:      c.Condition,
 				ConditionLevel: cLevel,
-				Message:        c.Message,
+				// ConditionLevel: c.ConditionLevel,
+				Message: c.Message,
 			}
 			conditionsResponse = append(conditionsResponse, &data)
 		}
@@ -1107,6 +1112,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 	return conditionsResponse, nil
 }
 
+// TODO: insert時だけ使うにできる?
 // ISUのコンディションの文字列からコンディションレベルを計算
 func calculateConditionLevel(condition string) (string, error) {
 	var conditionLevel string
@@ -1256,12 +1262,20 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
+		var conditionLevel string
+		conditionLevel, err = calculateConditionLevel(cond.Condition)
+		if err != nil {
+			c.Logger().Errorf("calculate condition level error: %v", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+
 		conditions = append(conditions, IsuCondition{
-			JIAIsuUUID: jiaIsuUUID,
-			Timestamp:  timestamp,
-			IsSitting:  cond.IsSitting,
-			Condition:  cond.Condition,
-			Message:    cond.Message,
+			JIAIsuUUID:     jiaIsuUUID,
+			Timestamp:      timestamp,
+			IsSitting:      cond.IsSitting,
+			Condition:      cond.Condition,
+			ConditionLevel: conditionLevel,
+			Message:        cond.Message,
 		})
 
 		// _, err = tx.Exec(
@@ -1279,8 +1293,8 @@ func postIsuCondition(c echo.Context) error {
 
 	_, err = db.NamedExec(
 		"INSERT INTO `isu_condition`"+
-			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
-			"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)",
+			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
+			"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :condition_level, :message)",
 		conditions)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
