@@ -114,6 +114,7 @@ collation-server      = utf8mb4_general_ci
 # Read the manual for more InnoDB related options. There are many!
 
 innodb_flush_log_at_trx_commit = 0 # or 2
+innodb_flush_method=O_DIRECT
 
 #
 # * Unix socket authentication plugin is built-in since 10.0.22-6
