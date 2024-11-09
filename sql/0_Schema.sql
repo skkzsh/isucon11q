@@ -23,7 +23,14 @@ CREATE TABLE `isu_condition` (
   `condition` VARCHAR(255) NOT NULL,
   `message` VARCHAR(255) NOT NULL,
   `created_at` DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),
-  `condition_level` VARCHAR(10) DEFAULT 'dummy', -- ENUM('info', 'warning', 'critical') NOT NULL,
+  `condition_level` VARCHAR(10) AS (
+      CASE
+      WHEN (LENGTH(`condition`) - LENGTH(REPLACE(`condition`, 'true', ''))) / LENGTH('true') = 0 THEN 'info'
+      WHEN (LENGTH(`condition`) - LENGTH(REPLACE(`condition`, 'true', ''))) / LENGTH('true') IN (1, 2) THEN 'warning'
+      WHEN (LENGTH(`condition`) - LENGTH(REPLACE(`condition`, 'true', ''))) / LENGTH('true') = 3 THEN 'critical'
+      ELSE ''
+      END
+      ) STORED, -- NOT NULL,
   PRIMARY KEY(`id`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 

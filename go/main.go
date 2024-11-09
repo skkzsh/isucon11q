@@ -1262,20 +1262,20 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
-		var conditionLevel string
-		conditionLevel, err = calculateConditionLevel(cond.Condition)
-		if err != nil {
-			c.Logger().Errorf("calculate condition level error: %v", err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
+		// var conditionLevel string
+		// conditionLevel, err = calculateConditionLevel(cond.Condition)
+		// if err != nil {
+		// 	c.Logger().Errorf("calculate condition level error: %v", err)
+		// 	return c.NoContent(http.StatusInternalServerError)
+		// }
 
 		conditions = append(conditions, IsuCondition{
-			JIAIsuUUID:     jiaIsuUUID,
-			Timestamp:      timestamp,
-			IsSitting:      cond.IsSitting,
-			Condition:      cond.Condition,
-			ConditionLevel: conditionLevel,
-			Message:        cond.Message,
+			JIAIsuUUID: jiaIsuUUID,
+			Timestamp:  timestamp,
+			IsSitting:  cond.IsSitting,
+			Condition:  cond.Condition,
+			// ConditionLevel: conditionLevel,
+			Message: cond.Message,
 		})
 
 		// _, err = tx.Exec(
@@ -1293,8 +1293,8 @@ func postIsuCondition(c echo.Context) error {
 
 	_, err = db.NamedExec(
 		"INSERT INTO `isu_condition`"+
-			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `condition_level`, `message`)"+
-			"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :condition_level, :message)",
+			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+ // , `condition_level`
+			"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", // , :condition_level
 		conditions)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
