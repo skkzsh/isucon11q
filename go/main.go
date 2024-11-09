@@ -331,9 +331,10 @@ func getUserIDFromSession(c echo.Context) (string, int, error) {
 	return jiaUserID, 0, nil
 }
 
-func getJIAServiceURL(tx *sqlx.Tx) string {
+// func getJIAServiceURL(tx *sqlx.Tx) string {
+func getJIAServiceURL(db *sqlx.DB) string {
 	var config Config
-	err := tx.Get(&config, "SELECT * FROM `isu_association_config` WHERE `name` = ?", "jia_service_url")
+	err := db.Get(&config, "SELECT * FROM `isu_association_config` WHERE `name` = ?", "jia_service_url")
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			log.Print(err)
@@ -492,15 +493,16 @@ func getIsuList(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
+	// tx, err := db.Beginx()
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
+	// defer tx.Rollback()
 
 	isuList := []Isu{}
-	err = tx.Select(
+	// err = tx.Select(
+	err = db.Select(
 		&isuList,
 		"SELECT * FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC",
 		jiaUserID)
@@ -513,7 +515,8 @@ func getIsuList(c echo.Context) error {
 	for _, isu := range isuList {
 		var lastCondition IsuCondition
 		foundLastCondition := true
-		err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+		err = db.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
 			isu.JIAIsuUUID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -552,11 +555,11 @@ func getIsuList(c echo.Context) error {
 		responseList = append(responseList, res)
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	// err = tx.Commit()
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
 
 	return c.JSON(http.StatusOK, responseList)
 }
@@ -609,14 +612,15 @@ func postIsu(c echo.Context) error {
 		}
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
+	// tx, err := db.Beginx()
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
+	// defer tx.Rollback()
 
-	_, err = tx.Exec("INSERT INTO `isu`"+
+	// _, err = tx.Exec("INSERT INTO `isu`"+
+	_, err = db.Exec("INSERT INTO `isu`"+
 		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",
 		jiaIsuUUID, isuName, image, jiaUserID)
 	if err != nil {
@@ -630,7 +634,8 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	targetURL := getJIAServiceURL(tx) + "/api/activate"
+	// targetURL := getJIAServiceURL(tx) + "/api/activate"
+	targetURL := getJIAServiceURL(db) + "/api/activate"
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
@@ -670,14 +675,16 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	_, err = tx.Exec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
+	// _, err = tx.Exec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
+	_, err = db.Exec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	var isu Isu
-	err = tx.Get(
+	// err = tx.Get(
+	err = db.Get(
 		&isu,
 		"SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 		jiaUserID, jiaIsuUUID)
@@ -686,11 +693,11 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	// err = tx.Commit()
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
 
 	return c.JSON(http.StatusCreated, isu)
 }
@@ -779,15 +786,16 @@ func getIsuGraph(c echo.Context) error {
 	}
 	date := time.Unix(datetimeInt64, 0).Truncate(time.Hour)
 
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
+	// tx, err := db.Beginx()
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
+	// defer tx.Rollback()
 
 	var count int
-	err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+	// err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+	err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
 		jiaUserID, jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
@@ -797,30 +805,33 @@ func getIsuGraph(c echo.Context) error {
 		return c.String(http.StatusNotFound, "not found: isu")
 	}
 
-	res, err := generateIsuGraphResponse(tx, jiaIsuUUID, date)
+	// res, err := generateIsuGraphResponse(tx, jiaIsuUUID, date)
+	res, err := generateIsuGraphResponse(db, jiaIsuUUID, date)
 	if err != nil {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	// err = tx.Commit()
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
 
 	return c.JSON(http.StatusOK, res)
 }
 
 // グラフのデータ点を一日分生成
-func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Time) ([]GraphResponse, error) {
+// func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Time) ([]GraphResponse, error) {
+func generateIsuGraphResponse(db *sqlx.DB, jiaIsuUUID string, graphDate time.Time) ([]GraphResponse, error) {
 	dataPoints := []GraphDataPointWithInfo{}
 	conditionsInThisHour := []IsuCondition{}
 	timestampsInThisHour := []int64{}
 	var startTimeInThisHour time.Time
 	var condition IsuCondition
 
-	rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID)
+	// rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID)
+	rows, err := db.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID)
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
 	}
@@ -1218,15 +1229,16 @@ func postIsuCondition(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "bad request body")
 	}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
+	// tx, err := db.Beginx()
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
+	// defer tx.Rollback()
 
 	var count int
-	err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	// err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
+	err = db.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_isu_uuid` = ?", jiaIsuUUID)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -1242,7 +1254,8 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
-		_, err = tx.Exec(
+		// _, err = tx.Exec(
+		_, err = db.Exec(
 			"INSERT INTO `isu_condition`"+
 				"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
 				"	VALUES (?, ?, ?, ?, ?)",
@@ -1254,11 +1267,11 @@ func postIsuCondition(c echo.Context) error {
 
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	// err = tx.Commit()
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
 
 	return c.NoContent(http.StatusAccepted)
 }
