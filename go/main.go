@@ -305,7 +305,7 @@ func getSession(r *http.Request) (*sessions.Session, error) {
 	return session, nil
 }
 
-func getUserIDFromSession(c echo.Context) (string, int, error) {
+func getUserIDFromSession(c echo.Context) (string, int, error) { // TODO: CPU
 	session, err := getSession(c.Request())
 	if err != nil {
 		return "", http.StatusInternalServerError, fmt.Errorf("failed to get session: %v", err)
@@ -516,7 +516,7 @@ func getIsuList(c echo.Context) error {
 		var lastCondition IsuCondition
 		foundLastCondition := true
 		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-		err = db.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+		err = db.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", // TODO: N+1
 			isu.JIAIsuUUID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -831,7 +831,7 @@ func generateIsuGraphResponse(db *sqlx.DB, jiaIsuUUID string, graphDate time.Tim
 	var condition IsuCondition
 
 	// rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID)
-	rows, err := db.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID)
+	rows, err := db.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID) // TODO: slow query
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
 	}
@@ -1059,7 +1059,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 	var err error
 
 	if startTime.IsZero() {
-		err = db.Select(&conditions,
+		err = db.Select(&conditions, // TODO: slow query
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
 				"	ORDER BY `timestamp` DESC",
@@ -1099,6 +1099,7 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 		}
 	}
 
+	// TODO: 先に絞れないか?
 	if len(conditionsResponse) > limit {
 		conditionsResponse = conditionsResponse[:limit]
 	}
@@ -1154,7 +1155,7 @@ func getTrend(c echo.Context) error {
 		for _, isu := range isuList {
 			conditions := []IsuCondition{}
 			err = db.Select(&conditions,
-				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC",
+				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC", // TODO: N+1
 				isu.JIAIsuUUID,
 			)
 			if err != nil {
