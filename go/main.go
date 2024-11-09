@@ -530,11 +530,11 @@ func getIsuList(c echo.Context) error {
 
 		var formattedCondition *GetIsuConditionResponse
 		if foundLastCondition {
-			conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
-			if err != nil {
-				c.Logger().Error(err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
+			// conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
+			// if err != nil {
+			// 	c.Logger().Error(err)
+			// 	return c.NoContent(http.StatusInternalServerError)
+			// }
 
 			formattedCondition = &GetIsuConditionResponse{
 				JIAIsuUUID:     lastCondition.JIAIsuUUID,
@@ -542,8 +542,9 @@ func getIsuList(c echo.Context) error {
 				Timestamp:      lastCondition.Timestamp.Unix(),
 				IsSitting:      lastCondition.IsSitting,
 				Condition:      lastCondition.Condition,
-				ConditionLevel: conditionLevel,
-				Message:        lastCondition.Message,
+				ConditionLevel: lastCondition.ConditionLevel,
+				// ConditionLevel: conditionLevel,
+				Message: lastCondition.Message,
 			}
 		}
 
@@ -1112,25 +1113,24 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 	return conditionsResponse, nil
 }
 
-// TODO: insert時だけ使うにできる?
 // ISUのコンディションの文字列からコンディションレベルを計算
-func calculateConditionLevel(condition string) (string, error) {
-	var conditionLevel string
-
-	warnCount := strings.Count(condition, "=true")
-	switch warnCount {
-	case 0:
-		conditionLevel = conditionLevelInfo
-	case 1, 2:
-		conditionLevel = conditionLevelWarning
-	case 3:
-		conditionLevel = conditionLevelCritical
-	default:
-		return "", fmt.Errorf("unexpected warn count")
-	}
-
-	return conditionLevel, nil
-}
+// func calculateConditionLevel(condition string) (string, error) {
+// 	var conditionLevel string
+//
+// 	warnCount := strings.Count(condition, "=true")
+// 	switch warnCount {
+// 	case 0:
+// 		conditionLevel = conditionLevelInfo
+// 	case 1, 2:
+// 		conditionLevel = conditionLevelWarning
+// 	case 3:
+// 		conditionLevel = conditionLevelCritical
+// 	default:
+// 		return "", fmt.Errorf("unexpected warn count")
+// 	}
+//
+// 	return conditionLevel, nil
+// }
 
 // GET /api/trend
 // ISUの性格毎の最新のコンディション情報
@@ -1171,16 +1171,17 @@ func getTrend(c echo.Context) error {
 
 			if len(conditions) > 0 {
 				isuLastCondition := conditions[0]
-				conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
-				if err != nil {
-					c.Logger().Error(err)
-					return c.NoContent(http.StatusInternalServerError)
-				}
+				// conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
+				// if err != nil {
+				// 	c.Logger().Error(err)
+				// 	return c.NoContent(http.StatusInternalServerError)
+				// }
 				trendCondition := TrendCondition{
 					ID:        isu.ID,
 					Timestamp: isuLastCondition.Timestamp.Unix(),
 				}
-				switch conditionLevel {
+				// switch conditionLevel {
+				switch isuLastCondition.ConditionLevel {
 				case "info":
 					characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
 				case "warning":
