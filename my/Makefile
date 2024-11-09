@@ -66,9 +66,10 @@ build:
 	sudo systemctl restart $(APP_NAME)
 
 restart:
+	sudo systemctl restart jiaapi-mock
 	sudo systemctl restart $(DB_MIDDLE)
 	sudo systemctl restart nginx
-	# sudo systemctl restart datadog-agent
+    # sudo systemctl restart datadog-agent
     # sudo systemctl restart memcached
 
 prepare:
