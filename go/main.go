@@ -832,7 +832,7 @@ func generateIsuGraphResponse(db *sqlx.DB, jiaIsuUUID string, graphDate time.Tim
 	var condition IsuCondition
 
 	// rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID)
-	rows, err := db.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID) // TODO: slow query
+	rows, err := db.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? AND `timestamp` >= ? ORDER BY `timestamp` ASC", jiaIsuUUID, graphDate) // TODO: slow query
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
 	}
@@ -1077,9 +1077,8 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 			query, params...,
 		// "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 		// 	"	AND `timestamp` < ?"+
-		// 	"	AND `condition_level` IN (?)"+
-		// 	"	ORDER BY `timestamp` DESC", // LIMIT ?
-		// jiaIsuUUID, endTime, conditionLevel, // limit,
+		// 	"	ORDER BY `timestamp` DESC",
+		// jiaIsuUUID, endTime, conditionLevel,
 		)
 	} else {
 		query, params, err := sqlx.In(
@@ -1098,9 +1097,8 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 		// "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 		// 	"	AND `timestamp` < ?"+
 		// 	"	AND ? <= `timestamp`"+
-		// 	"	AND `condition_level` IN (?)"+
-		// 	"	ORDER BY `timestamp` DESC", // LIMIT ?
-		// jiaIsuUUID, endTime, startTime, conditionLevel, // limit,
+		// 	"	ORDER BY `timestamp` DESC",
+		// jiaIsuUUID, endTime, startTime, conditionLevel,
 		)
 	}
 	if err != nil {
