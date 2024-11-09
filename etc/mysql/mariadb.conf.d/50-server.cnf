@@ -80,8 +80,6 @@ expire_logs_days        = 10
 #binlog_do_db           = include_database_name
 #binlog_ignore_db       = exclude_database_name
 
-disable-log-bin = 1
-
 #
 # * Security Features
 #
