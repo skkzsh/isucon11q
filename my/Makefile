@@ -46,10 +46,10 @@ conf/nginx/deploy:
 	sudo cp $(GIT_DIR)$(NGINX_SITES_AVAIL)/*.conf $(NGINX_SITES_AVAIL)/
 
 conf/mariadb/deploy:
-	sudo cp -p $(MARIADBD_CONF){,.$(DATE)}
-	sudo cp -p {$(GIT_DIR),}$(MARIADBD_CONF)
-    # sudo cp -p $(MYSQLD_CONF){,.$(DATE)}
-    # sudo cp -p {$(GIT_DIR),}$(MYSQLD_CONF)
+	sudo cp $(MARIADBD_CONF){,.$(DATE)}
+	sudo cp {$(GIT_DIR),}$(MARIADBD_CONF)
+    # sudo cp $(MYSQLD_CONF){,.$(DATE)}
+    # sudo cp {$(GIT_DIR),}$(MYSQLD_CONF)
 
 rotate:
 	sudo mv $(NGINX_ACCESS_LOG){,-$(DATE)}.log
