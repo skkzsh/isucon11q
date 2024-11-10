@@ -1186,7 +1186,7 @@ func getTrend(c echo.Context) error {
 		for _, isu := range isuList {
 			conditions := []IsuCondition{}
 			err = db.Select(&conditions,
-				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC", // TODO: N+1
+				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC LIMIT 1", // TODO: N+1
 				isu.JIAIsuUUID,
 			)
 			if err != nil {
@@ -1317,7 +1317,7 @@ func postIsuCondition(c echo.Context) error {
 
 	}
 
-	_, err = db.NamedExec(
+	_, err = db.NamedExec( // TODO: slow query
 		"INSERT INTO `isu_condition`"+
 			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+ // , `condition_level`
 			"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", // , :condition_level
