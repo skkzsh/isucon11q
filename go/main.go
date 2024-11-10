@@ -506,46 +506,79 @@ func getIsuList(c echo.Context) error {
 		&isuList,
 		"SELECT * FROM `isu` WHERE `jia_user_id` = ? ORDER BY `id` DESC",
 		jiaUserID)
+
+	var JIAIsuUUIDs []string
+	for _, isu := range isuList {
+		JIAIsuUUIDs = append(JIAIsuUUIDs, isu.JIAIsuUUID)
+	}
+
+	lastConditions := []IsuCondition{}
+	query, params, err := sqlx.In(
+		"SELECT c.* FROM `isu_condition` c JOIN ("+
+			" SELECT `jia_isu_uuid`, MAX(`timestamp`) AS `latest_timestamp`"+
+			" FROM `isu_condition`"+
+			" WHERE `jia_isu_uuid` IN (?)"+
+			" GROUP BY `jia_isu_uuid`"+
+			" ) `latest`"+
+			" ON c.jia_isu_uuid = latest.jia_isu_uuid AND c.timestamp = latest.latest_timestamp",
+		JIAIsuUUIDs,
+	)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	err = db.Select(
+		&lastConditions,
+		query, params...,
+	)
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
 	responseList := []GetIsuListResponse{}
-	for _, isu := range isuList {
-		var lastCondition IsuCondition
-		foundLastCondition := true
-		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
-		err = db.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1", // TODO: N+1
-			isu.JIAIsuUUID)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				foundLastCondition = false
-			} else {
-				c.Logger().Errorf("db error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
+
+	for _, lastCondition := range lastConditions {
+		isu := Isu{}
+		for _, i := range isuList {
+			if i.JIAIsuUUID == lastCondition.JIAIsuUUID {
+				isu = i
+				break
 			}
 		}
+		// var lastCondition IsuCondition
+		/// foundLastCondition := true
+		// err = tx.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+		// err = db.Get(&lastCondition, "SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` DESC LIMIT 1",
+		// 	isu.JIAIsuUUID)
+		// if err != nil {
+		// 	if errors.Is(err, sql.ErrNoRows) {
+		// 		foundLastCondition = false
+		// 	} else {
+		// 		c.Logger().Errorf("db error: %v", err)
+		// 		return c.NoContent(http.StatusInternalServerError)
+		// 	}
+		// }
 
 		var formattedCondition *GetIsuConditionResponse
-		if foundLastCondition {
-			// conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
-			// if err != nil {
-			// 	c.Logger().Error(err)
-			// 	return c.NoContent(http.StatusInternalServerError)
-			// }
+		// if foundLastCondition {
+		// conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
+		// if err != nil {
+		// 	c.Logger().Error(err)
+		// 	return c.NoContent(http.StatusInternalServerError)
+		// }
 
-			formattedCondition = &GetIsuConditionResponse{
-				JIAIsuUUID:     lastCondition.JIAIsuUUID,
-				IsuName:        isu.Name,
-				Timestamp:      lastCondition.Timestamp.Unix(),
-				IsSitting:      lastCondition.IsSitting,
-				Condition:      lastCondition.Condition,
-				ConditionLevel: lastCondition.ConditionLevel,
-				// ConditionLevel: conditionLevel,
-				Message: lastCondition.Message,
-			}
+		formattedCondition = &GetIsuConditionResponse{
+			JIAIsuUUID:     lastCondition.JIAIsuUUID,
+			IsuName:        isu.Name,
+			Timestamp:      lastCondition.Timestamp.Unix(),
+			IsSitting:      lastCondition.IsSitting,
+			Condition:      lastCondition.Condition,
+			ConditionLevel: lastCondition.ConditionLevel,
+			// ConditionLevel: conditionLevel,
+			Message: lastCondition.Message,
 		}
+		// }
 
 		res := GetIsuListResponse{
 			ID:                 isu.ID,
