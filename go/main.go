@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -245,6 +246,8 @@ func main() {
 		// tracer.WithRuntimeMetrics(), // DD_RUNTIME_METRICS_ENABLED
 	)
 	defer tracer.Stop()
+
+	go batchIsuCondition()
 
 	e := echo.New()
 	e.Debug = true               // TODO
@@ -1238,6 +1241,11 @@ func getTrend(c echo.Context) error {
 	return c.JSON(http.StatusOK, res)
 }
 
+var (
+	conditionQueue = make([]IsuCondition, 0)
+	queueMutex     sync.Mutex
+)
+
 // POST /api/condition/:jia_isu_uuid
 // ISUからのコンディションを受け取る
 func postIsuCondition(c echo.Context) error {
@@ -1316,15 +1324,19 @@ func postIsuCondition(c echo.Context) error {
 
 	}
 
-	_, err = db.NamedExec(
-		"INSERT INTO `isu_condition`"+
-			"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+ // , `condition_level`
-			"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", // , :condition_level
-		conditions)
-	if err != nil {
-		c.Logger().Errorf("db error: %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	queueMutex.Lock()
+	conditionQueue = append(conditionQueue, conditions...)
+	queueMutex.Unlock()
+
+	// _, err = db.NamedExec(
+	// 	"INSERT INTO `isu_condition`"+
+	// 		"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+ // , `condition_level`
+	// 		"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)", // , :condition_level
+	// 	conditions)
+	// if err != nil {
+	// 	c.Logger().Errorf("db error: %v", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
 
 	// err = tx.Commit()
 	// if err != nil {
@@ -1333,6 +1345,34 @@ func postIsuCondition(c echo.Context) error {
 	// }
 
 	return c.NoContent(http.StatusAccepted)
+}
+
+// insertがslow queryとなっている
+// 遅延は許容されるため, キューに入れてまとめてinsertする
+func batchIsuCondition() {
+	for {
+		time.Sleep(1 * time.Second) // TODO: 調整
+
+		queueMutex.Lock()
+		if len(conditionQueue) > 0 {
+			// キューの内容をコピーしてクリア
+			conditions := conditionQueue
+			conditionQueue = make([]IsuCondition, 0)
+			queueMutex.Unlock()
+
+			// データベースにINSERT
+			_, err := db.NamedExec(
+				"INSERT INTO `isu_condition`"+
+					"	(`jia_isu_uuid`, `timestamp`, `is_sitting`, `condition`, `message`)"+
+					"	VALUES (:jia_isu_uuid, :timestamp, :is_sitting, :condition, :message)",
+				conditions)
+			if err != nil {
+				log.Errorf("db error: %v", err)
+			}
+		} else {
+			queueMutex.Unlock()
+		}
+	}
 }
 
 // ISUのコンディションの文字列がcsv形式になっているか検証
