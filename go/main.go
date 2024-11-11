@@ -1172,6 +1172,26 @@ func getTrend(c echo.Context) error {
 
 	res := []TrendResponse{}
 
+	lastConditionList := []IsuCondition{}
+	err = db.Select(
+		&lastConditionList,
+		"SELECT c.* FROM `isu_condition` c JOIN ("+
+			" SELECT `jia_isu_uuid`, MAX(`timestamp`) AS `last_timestamp`"+
+			" FROM `isu_condition`"+
+			" GROUP BY `jia_isu_uuid`"+
+			" ) `last`"+
+			" ON c.jia_isu_uuid = last.jia_isu_uuid AND c.timestamp = last.last_timestamp",
+	)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	lastConditionMap := map[string]IsuCondition{}
+	for _, c := range lastConditionList {
+		lastConditionMap[c.JIAIsuUUID] = c
+	}
+
 	for _, character := range characterList {
 		isuList := []Isu{}
 		err = db.Select(&isuList,
@@ -1187,37 +1207,39 @@ func getTrend(c echo.Context) error {
 		characterWarningIsuConditions := []*TrendCondition{}
 		characterCriticalIsuConditions := []*TrendCondition{}
 		for _, isu := range isuList {
-			conditions := []IsuCondition{}
-			err = db.Select(&conditions,
-				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC LIMIT 1", // TODO: N+1
-				isu.JIAIsuUUID,
-			)
-			if err != nil {
-				c.Logger().Errorf("db error: %v", err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
+			// conditions := []IsuCondition{}
+			// err = db.Select(&conditions,
+			// 	"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC LIMIT 1",
+			// 	isu.JIAIsuUUID,
+			// )
+			// if err != nil {
+			//  c.Logger().Errorf("db error: %v", err)
+			// 	return c.NoContent(http.StatusInternalServerError)
+			// }
 
-			if len(conditions) > 0 {
-				isuLastCondition := conditions[0]
-				// conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
-				// if err != nil {
-				// 	c.Logger().Error(err)
-				// 	return c.NoContent(http.StatusInternalServerError)
-				// }
-				trendCondition := TrendCondition{
-					ID:        isu.ID,
-					Timestamp: isuLastCondition.Timestamp.Unix(),
-				}
-				// switch conditionLevel {
-				switch isuLastCondition.ConditionLevel {
-				case "info":
-					characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
-				case "warning":
-					characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
-				case "critical":
-					characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
-				}
+			isuLastCondition := lastConditionMap[isu.JIAIsuUUID]
+
+			// if len(conditions) > 0 {
+			// isuLastCondition := conditions[0]
+			// conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
+			// if err != nil {
+			// 	c.Logger().Error(err)
+			// 	return c.NoContent(http.StatusInternalServerError)
+			// }
+			trendCondition := TrendCondition{
+				ID:        isu.ID,
+				Timestamp: isuLastCondition.Timestamp.Unix(),
 			}
+			// switch conditionLevel {
+			switch isuLastCondition.ConditionLevel {
+			case "info":
+				characterInfoIsuConditions = append(characterInfoIsuConditions, &trendCondition)
+			case "warning":
+				characterWarningIsuConditions = append(characterWarningIsuConditions, &trendCondition)
+			case "critical":
+				characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
+			}
+			// }
 
 		}
 
