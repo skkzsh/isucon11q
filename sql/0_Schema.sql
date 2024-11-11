@@ -16,8 +16,7 @@ CREATE TABLE `isu` (
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
 CREATE TABLE `isu_condition` (
-  -- `id` bigint AUTO_INCREMENT,
-  `id` bigint default 0, -- dummy
+  `id` bigint AUTO_INCREMENT,
   `jia_isu_uuid` CHAR(36) NOT NULL,
   `timestamp` DATETIME NOT NULL,
   `is_sitting` TINYINT(1) NOT NULL,
@@ -32,11 +31,10 @@ CREATE TABLE `isu_condition` (
       ELSE ''
       END
       ) STORED, -- NOT NULL,
-  -- PRIMARY KEY(`id`)
-  PRIMARY KEY(`jia_isu_uuid`, `timestamp`)
+  PRIMARY KEY(`id`)
 ) ENGINE=InnoDB DEFAULT CHARACTER SET=utf8mb4;
 
--- CREATE INDEX idx_jia_isu_uuid_timestamp ON isu_condition (jia_isu_uuid, timestamp DESC);
+CREATE INDEX idx_jia_isu_uuid_timestamp ON isu_condition (jia_isu_uuid, timestamp DESC);
 
 CREATE TABLE `user` (
   `jia_user_id` VARCHAR(255) PRIMARY KEY,
