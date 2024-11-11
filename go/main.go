@@ -1351,7 +1351,7 @@ func postIsuCondition(c echo.Context) error {
 // 遅延は許容されるため, キューに入れてまとめてinsertする
 func batchIsuCondition() {
 	for {
-		time.Sleep(100 * time.Millisecond) // TODO: 調整
+		time.Sleep(10 * time.Millisecond) // TODO: 調整
 
 		queueMutex.Lock()
 		if len(conditionQueue) > 0 {
