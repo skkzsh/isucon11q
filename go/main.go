@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -296,8 +297,24 @@ func main() {
 		return
 	}
 
-	serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
-	e.Logger.Fatal(e.Start(serverPort))
+	socketPath := "/tmp/echo.sock"
+
+	if _, err := os.Stat(socketPath); err == nil {
+		os.Remove(socketPath)
+	}
+
+	listener, err := net.Listen("unix", socketPath)
+	if err != nil {
+		log.Fatal("Listen error:", err)
+	}
+	defer listener.Close()
+
+	os.Chmod(socketPath, 0777)
+
+	// serverPort := fmt.Sprintf(":%v", getEnv("SERVER_APP_PORT", "3000"))
+	// e.Logger.Fatal(e.Start(serverPort))
+	e.Listener = listener
+	e.Logger.Fatal(e.Start(""))
 }
 
 func getSession(r *http.Request) (*sessions.Session, error) {
