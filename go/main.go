@@ -247,10 +247,10 @@ func main() {
 	go batchIsuCondition()
 
 	e := echo.New()
-	// e.Debug = true               // TODO
-	// e.Logger.SetLevel(log.DEBUG) // TODO
+	// e.Debug = true
+	// e.Logger.SetLevel(log.DEBUG)
 
-	e.Use(middleware.Logger())
+	// e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	// e.Use(echotrace.Middleware(echotrace.WithServiceName(ServiceName)))
 
