@@ -1,7 +1,10 @@
-name: test
+name: go
 
 on:
   push:
+    paths:
+      - go/**
+      - .github/workflows/go.yml
   workflow_dispatch:
 
 permissions:
@@ -13,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  go:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,18 +28,3 @@ jobs:
 
       - run: go build
         working-directory: go
-
-  sql:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - run: pip install sqlfluff
-
-      - run: sqlfluff lint 0_Schema.sql --dialect=mariadb -e LT01,LT02,LT05,CP05
-        working-directory: sql
