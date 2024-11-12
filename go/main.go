@@ -251,8 +251,8 @@ func main() {
 	go batchIsuCondition()
 
 	e := echo.New()
-	e.Debug = true               // TODO
-	e.Logger.SetLevel(log.DEBUG) // TODO
+	// e.Debug = true               // TODO
+	// e.Logger.SetLevel(log.DEBUG) // TODO
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
