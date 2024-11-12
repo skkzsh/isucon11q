@@ -27,10 +27,11 @@ MYSQL_ERROR_LOG := /var/log/mysql/error
 MARIADBD_CONF := /etc/mysql/mariadb.conf.d/50-server.cnf
 MYSQLD_CONF := /etc/mysql/mysql.conf.d/mysqld.cnf
 
-.PHONY: conf/backup conf/nginx/deploy conf/mariadb/deploy rotate truncate build restart prepare bench/before bench bench/after alp slp issue
+.PHONY: conf/backup conf/nginx/deploy conf/mariadb/deploy rotate truncate build clear restart prepare bench/before bench bench/after alp slp issue
 
 all: bench bench/after
 bench/after: alp slp issue
+bench/before: prepare truncate build clear restart
 
 conf/backup:
 	mkdir -p $(GIT_DIR)/etc/{nginx/sites-available,mysql/mariadb.conf.d}
@@ -57,6 +58,9 @@ rotate:
 	sudo mv $(SLOW_QUERY_LOG){,-$(DATE)}.log
 	sudo mv $(MYSQL_ERROR_LOG){,-$(DATE)}.log
 
+clear:
+	sudo rm -rf /var/cache/nginx
+
 truncate:
 	sudo truncate -s0 -c $(NGINX_ACCESS_LOG).log $(NGINX_ERROR_LOG).log $(SLOW_QUERY_LOG).log $(MYSQL_ERROR_LOG).log
     # mysqladmin flush-logs
@@ -75,7 +79,7 @@ restart:
 prepare:
 	mkdir -p ~/logs
 
-bench: prepare truncate build restart
+bench: bench/before
 	cd $(BENCH_DIR); \
 	$(BENCH_CMD) \
 	> >(tee ~/logs/bench-$(DATE).log) \
